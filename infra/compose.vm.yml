@@ -1,0 +1,32 @@
+# Surcharge VM Énov : uniquement les écarts avec le local (cf. docs/vm-enov.md).
+#
+#   docker compose -f compose.yml -f compose.vm.yml up -d
+#
+# Le domaine n'est pas ici : il vient de DOMAIN dans .env (<IP>.sslip.io sur la VM).
+services:
+  # Redémarrage même après un reboot de la VM ou un arrêt manuel du démon
+  traefik: { restart: always }
+  authentik-db: { restart: always }
+  authentik-server: { restart: always }
+  authentik-worker: { restart: always }
+  rallly-db: { restart: always }
+  garage: { restart: always }
+  rallly: { restart: always }
+  mailpit: { restart: always }
+
+# MTU des réseaux Docker aligné sur celui de l'interface de la VM (réseau
+# encapsulé Énov). Sans ça, des paquets trop gros peuvent être perdus et les
+# requêtes HTTPS sortantes (pull d'images, etc.) se bloquer.
+networks:
+  proxy:
+    driver_opts:
+      com.docker.network.driver.mtu: ${DOCKER_MTU:-1500}
+  authentik_backend:
+    driver_opts:
+      com.docker.network.driver.mtu: ${DOCKER_MTU:-1500}
+  rallly_backend:
+    driver_opts:
+      com.docker.network.driver.mtu: ${DOCKER_MTU:-1500}
+  mail:
+    driver_opts:
+      com.docker.network.driver.mtu: ${DOCKER_MTU:-1500}
