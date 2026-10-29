@@ -1,19 +1,52 @@
+# Stack locale : Traefik (reverse proxy) -> Rallly (+ Postgres, Mailpit).
+# Démarrage : cp .env.example .env (puis remplir), puis docker compose up -d --build
+# URLs : http://rallly.localhost (app) et http://mail.localhost (emails reçus)
+# Seul Traefik publie un port : tout le reste n'est joignable que via le réseau Docker.
 services:
+  traefik:
+    image: traefik:v3.7
+    restart: always
+    command:
+      # Découvre les services via leurs labels Docker...
+      - --providers.docker=true
+      # ...mais seulement ceux qui ont traefik.enable=true (pas d'exposition accidentelle)
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      # Traefik lit l'API Docker pour trouver les conteneurs ; lecture seule
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - no-new-privileges:true
+
   rallly_db:
     image: postgres:18-alpine
     restart: always
-    ports:
-      - "5450:5432"
+    # Pas de "ports:" : la base n'est jamais exposée hors du réseau Docker
     volumes:
       - db-data:/var/lib/postgresql
     environment:
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${RALLLY_DB_PASSWORD:?RALLLY_DB_PASSWORD manquant dans .env}
       - POSTGRES_DB=rallly
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  mailpit:
+    # Faux serveur SMTP de lab : capture les emails et les affiche dans une page web
+    image: axllent/mailpit:v1.29
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mailpit.rule=Host(`mail.localhost`)
+      - traefik.http.services.mailpit.loadbalancer.server.port=8025
+    security_opt:
+      - no-new-privileges:true
 
   rallly_selfhosted:
     build:
@@ -25,13 +58,20 @@ services:
     depends_on:
       rallly_db:
         condition: service_healthy
-    ports:
-      - 3000:3000
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@rallly_db/rallly
-    env_file:
-      - path: apps/web/.env
-        required: false
+      - DATABASE_URL=postgres://postgres:${RALLLY_DB_PASSWORD}@rallly_db/rallly
+      - SECRET_PASSWORD=${SECRET_PASSWORD:?SECRET_PASSWORD manquant dans .env}
+      - NEXT_PUBLIC_BASE_URL=http://rallly.localhost
+      - SUPPORT_EMAIL=support@rallly.localhost
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_SECURE=false
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.rallly.rule=Host(`rallly.localhost`)
+      - traefik.http.services.rallly.loadbalancer.server.port=3000
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   db-data:
