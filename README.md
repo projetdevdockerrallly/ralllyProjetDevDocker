@@ -23,6 +23,8 @@ Rallly self-hosted derrière **Authentik** (OIDC) et **Traefik**, déployé en l
 
 ➡️ **Toute la partie infra (démarrage, architecture, choix de sécurité) : [`infra/README.md`](./infra/README.md)**
 
+➡️ **Features Rallly du groupe (2 catalogue + 1 libre : problème, périmètre, critères de démo) : [`features.md`](./features.md)**
+
 ```bash
 cd infra && sh scripts/init-env.sh && docker compose up -d
 ```
