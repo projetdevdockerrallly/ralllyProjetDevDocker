@@ -129,11 +129,22 @@ entries:
       user_path_template: users/external
       create_users_group: !KeyOf group-rallly-users
 
-  # 4. Connexion automatique
+  # 4. Connexion automatique (session Authentik : le SSO Rallly sera immédiat)
   - model: authentik_stages_user_login.userloginstage
     id: stage-user-login
     identifiers:
       name: rallly-invitation-user-login
+
+  # 5. Redirection vers Rallly. Sans elle, l'invité arrive sur le tableau de
+  #    bord Authentik, réservé aux utilisateurs internes ("Permission refusée").
+  - model: authentik_stages_redirect.redirectstage
+    id: stage-redirect-rallly
+    identifiers:
+      name: rallly-invitation-redirect
+    attrs:
+      mode: static
+      target_static: !Env [RALLLY_URL, "http://rallly.localhost"]
+      keep_context: false
 
   # Enchaînement des étapes
   - model: authentik_flows.flowstagebinding
@@ -162,3 +173,9 @@ entries:
       target: !KeyOf flow-invitation
       stage: !KeyOf stage-user-login
       order: 100
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow-invitation
+      stage: !KeyOf stage-redirect-rallly
+      order: 200

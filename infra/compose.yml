@@ -5,8 +5,8 @@
 #
 #    http://rallly.${DOMAIN}    -> Rallly
 #    http://auth.${DOMAIN}      -> Authentik (IdP OIDC)
-#    http://mail.${DOMAIN}      -> Mailpit (SMTP de lab, boîte de réception web)
-#    http://traefik.${DOMAIN}   -> dashboard Traefik
+#    http://mail.${DOMAIN}      -> Mailpit (SMTP de lab)      [admins, via Authentik]
+#    http://traefik.${DOMAIN}   -> dashboard Traefik          [admins, via Authentik]
 #
 #  Réseaux :
 #    proxy             : Traefik <-> services exposés (seul réseau avec sortie)
@@ -51,6 +51,9 @@ x-authentik-env: &authentik-env
   RALLLY_OIDC_CLIENT_ID: ${RALLLY_OIDC_CLIENT_ID}
   RALLLY_OIDC_CLIENT_SECRET: ${RALLLY_OIDC_CLIENT_SECRET}
   DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD:-}
+  AUTHENTIK_URL: ${AUTHENTIK_URL}
+  TRAEFIK_URL: ${TRAEFIK_URL:-http://traefik.${DOMAIN}}
+  MAILPIT_URL: ${MAILPIT_URL:-http://mail.${DOMAIN}}
 
 services:
   # ---------------------------------------------------------------------------
@@ -97,6 +100,7 @@ services:
       - traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)
       - traefik.http.routers.dashboard.entrypoints=web
       - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=authentik@docker
 
   # ---------------------------------------------------------------------------
   #  Authentik (IdP OIDC) : server + worker + PostgreSQL
@@ -137,6 +141,15 @@ services:
       - traefik.http.routers.authentik.rule=Host(`auth.${DOMAIN}`)
       - traefik.http.routers.authentik.entrypoints=web
       - traefik.http.services.authentik.loadbalancer.server.port=9000
+      # Forward-auth : Traefik demande à l'outpost embarqué si la requête est autorisée
+      - traefik.http.middlewares.authentik.forwardauth.address=http://authentik-server:9000/outpost.goauthentik.io/auth/traefik
+      - traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid
+      # Callbacks de l'outpost sur les hôtes protégés (/outpost.goauthentik.io/...)
+      - traefik.http.routers.authentik-outpost.rule=(Host(`traefik.${DOMAIN}`) || Host(`mail.${DOMAIN}`)) && PathPrefix(`/outpost.goauthentik.io/`)
+      - traefik.http.routers.authentik-outpost.entrypoints=web
+      - traefik.http.routers.authentik-outpost.priority=1000
+      - traefik.http.routers.authentik-outpost.service=authentik
 
   authentik-worker:
     <<: *hardening
@@ -259,6 +272,8 @@ services:
       - traefik.enable=true
       - traefik.http.routers.mailpit.rule=Host(`mail.${DOMAIN}`)
       - traefik.http.routers.mailpit.entrypoints=web
+      # Réservé aux admins (forward-auth Authentik, blueprint 30-forward-auth-admin.yaml)
+      - traefik.http.routers.mailpit.middlewares=authentik@docker
       - traefik.http.services.mailpit.loadbalancer.server.port=8025
 
 networks:

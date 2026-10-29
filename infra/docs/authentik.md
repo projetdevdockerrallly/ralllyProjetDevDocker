@@ -11,6 +11,7 @@ Il n'y a aucun clic à faire pour obtenir un SSO fonctionnel après un `docker c
 |---|---|
 | `10-rallly-sso.yaml` | Provider OIDC, application Rallly, groupes `rallly-admins` / `rallly-users`, policies d'accès, comptes de démo |
 | `20-invitation-externe.yaml` | Flux d'enrôlement sur invitation (`rallly-invitation`) |
+| `30-forward-auth-admin.yaml` | Dashboard Traefik et Mailpit protégés (forward-auth), réservés aux admins |
 
 Pour vérifier l'application : **Admin → Customization → Blueprints**. Le statut doit être `successful`.
 
@@ -79,6 +80,7 @@ Le flux `rallly-invitation` comprend les étapes suivantes :
 2. **Prompt** : nom d'utilisateur, nom, e-mail et mot de passe.
 3. **User write** : crée un utilisateur de type **external** (`users/external`) et l'ajoute à `rallly-users`.
 4. **User login** : connexion automatique.
+5. **Redirect** : renvoi vers Rallly. Sans cette étape, l'invité arrive sur le tableau de bord Authentik, réservé aux utilisateurs *internes* (« Permission refusée »).
 
 ### Démontrer une invitation
 
@@ -89,8 +91,46 @@ Le flux `rallly-invitation` comprend les étapes suivantes :
 5. L'invité crée son compte, puis ouvre Rallly → « Authentik » → accès (groupe `rallly-users`).
 6. Le même lien réutilisé (single use) ou le flux ouvert sans `itoken` est refusé.
 
+## 4. Outils d'administration protégés (forward-auth)
+
+Le dashboard Traefik et Mailpit n'ont pas d'authentification propre. Ils sont protégés par
+Authentik **au niveau du reverse proxy** :
+
+```mermaid
+sequenceDiagram
+  participant N as Navigateur
+  participant T as Traefik
+  participant O as Outpost embarqué (authentik-server)
+  N->>T: GET traefik.localhost
+  T->>O: middleware forwardAuth /outpost.goauthentik.io/auth/traefik
+  O-->>T: 302 login Authentik (pas de session) / 200 (autorisé)
+  T-->>N: redirection vers auth.localhost puis retour, ou page demandée
+```
+
+- Il y a un provider **Proxy** en mode `forward_single` par hôte, servi par l'outpost embarqué.
+- Le middleware Traefik `authentik@docker` est déclaré par les labels du service `authentik-server`.
+  Les routes `/outpost.goauthentik.io/` des hôtes protégés sont renvoyées vers Authentik.
+- Les policies réservent l'accès aux groupes `rallly-admins` (alice) et `authentik Admins` (akadmin).
+
+| Compte | Rallly | Traefik / Mailpit |
+|---|---|---|
+| `akadmin` | ❌ | ✅ |
+| `alice` | ✅ admin | ✅ |
+| `bob` | ✅ | ❌ |
+| `charlie` | ❌ | ❌ |
+
+C'est une **deuxième policy de groupe** distincte de celle de Rallly : `bob` utilise Rallly mais ne
+voit pas les outils d'administration.
+
+**En secours**, si l'outpost est en panne et que Mailpit est inaccessible pendant la démo, il suffit
+de commenter la ligne `traefik.http.routers.mailpit.middlewares=authentik@docker` dans `compose.yml`,
+puis de lancer `docker compose up -d mailpit`.
+
 ## Pièges rencontrés
 
+- **Forward-auth : accès refusé sur les outils.** Il faut vérifier que l'outpost embarqué sert bien les deux
+  providers (Admin → Applications → Outposts → *authentik Embedded Outpost*) et que son
+  `authentik_host` vaut `AUTHENTIK_URL`.
 - **Modification d'un blueprint non prise en compte (Docker Desktop / Windows).** La surveillance
   des fichiers ne traverse pas toujours le montage : `docker compose restart authentik-worker`.
 - **Issuer différent entre conteneur et navigateur.** Rallly doit joindre Authentik par la même URL

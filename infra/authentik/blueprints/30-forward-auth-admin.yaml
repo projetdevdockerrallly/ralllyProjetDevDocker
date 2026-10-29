@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+#
+# Outils d'administration protégés par Authentik (forward-auth Traefik) :
+#   - dashboard Traefik  (traefik.<DOMAIN>)
+#   - Mailpit            (mail.<DOMAIN>)
+# Accès réservé aux groupes rallly-admins et "authentik Admins" (akadmin).
+#
+# Fonctionnement : Traefik interroge l'outpost embarqué d'Authentik
+# (middleware "authentik@docker", cf. compose.yml) avant chaque requête.
+# Un provider Proxy en mode "forward_single" par hôte.
+version: 1
+metadata:
+  name: Projet - Forward-auth outils admin (Traefik, Mailpit)
+  labels:
+    blueprints.goauthentik.io/description: "Protège le dashboard Traefik et Mailpit derrière Authentik, réservés aux administrateurs."
+context:
+  traefik_url: !Env [TRAEFIK_URL, "http://traefik.localhost"]
+  mailpit_url: !Env [MAILPIT_URL, "http://mail.localhost"]
+  authentik_url: !Env [AUTHENTIK_URL, "http://auth.localhost"]
+entries:
+  - model: authentik_core.group
+    id: group-rallly-admins
+    identifiers:
+      name: rallly-admins
+
+  # ---------------------------------------------------------------------------
+  # Dashboard Traefik
+  # ---------------------------------------------------------------------------
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider-traefik
+    identifiers:
+      name: Traefik dashboard
+    attrs:
+      mode: forward_single
+      external_host: !Context traefik_url
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      access_token_validity: hours=8
+
+  - model: authentik_core.application
+    id: app-traefik
+    identifiers:
+      slug: traefik-dashboard
+    attrs:
+      name: Traefik dashboard
+      provider: !KeyOf provider-traefik
+      meta_launch_url: !Context traefik_url
+      meta_description: "Routes et services du reverse proxy (admins)"
+      policy_engine_mode: any
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-traefik
+      order: 0
+    attrs:
+      group: !KeyOf group-rallly-admins
+      timeout: 30
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-traefik
+      order: 10
+    attrs:
+      group: !Find [authentik_core.group, [name, authentik Admins]]
+      timeout: 30
+
+  # ---------------------------------------------------------------------------
+  # Mailpit
+  # ---------------------------------------------------------------------------
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider-mailpit
+    identifiers:
+      name: Mailpit
+    attrs:
+      mode: forward_single
+      external_host: !Context mailpit_url
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      access_token_validity: hours=8
+
+  - model: authentik_core.application
+    id: app-mailpit
+    identifiers:
+      slug: mailpit
+    attrs:
+      name: Mailpit
+      provider: !KeyOf provider-mailpit
+      meta_launch_url: !Context mailpit_url
+      meta_description: "Boîte mail de lab (admins)"
+      policy_engine_mode: any
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-mailpit
+      order: 0
+    attrs:
+      group: !KeyOf group-rallly-admins
+      timeout: 30
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-mailpit
+      order: 10
+    attrs:
+      group: !Find [authentik_core.group, [name, authentik Admins]]
+      timeout: 30
+
+  # ---------------------------------------------------------------------------
+  # Outpost embarqué : sert les 2 providers ci-dessus
+  # ---------------------------------------------------------------------------
+  - model: authentik_outposts.outpost
+    identifiers:
+      managed: goauthentik.io/outposts/embedded
+    attrs:
+      providers:
+        - !KeyOf provider-traefik
+        - !KeyOf provider-mailpit
+      config:
+        authentik_host: !Context authentik_url

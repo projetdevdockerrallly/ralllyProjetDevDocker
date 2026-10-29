@@ -42,8 +42,8 @@ flowchart LR
 |---|---|
 | http://rallly.localhost | Rallly |
 | http://auth.localhost | Authentik (admin : `akadmin`) |
-| http://mail.localhost | Mailpit, boîte mail de lab (tous les e-mails envoyés y arrivent) |
-| http://traefik.localhost | Dashboard Traefik |
+| http://mail.localhost | Mailpit, boîte mail de lab (tous les e-mails envoyés y arrivent). **Admins uniquement**, via Authentik |
+| http://traefik.localhost | Dashboard Traefik. **Admins uniquement**, via Authentik |
 
 `*.localhost` résout automatiquement vers `127.0.0.1` dans les navigateurs, il n'y a rien à ajouter au fichier hosts.
 
@@ -105,7 +105,6 @@ docker compose down -v     # supprime aussi les volumes (bases, médias) → rep
 Limites assumées (à traiter dans les phases suivantes) :
 
 - **HTTP en local.** TLS est prévu pour la VM.
-- **Dashboard Traefik sans authentification.** Il sera protégé plus tard par Authentik en forward-auth.
 - **Socket Docker toujours monté**, même en lecture seule. Un `docker-socket-proxy` est envisagé.
 - **Licence Rallly self-hosted.** Elle est gratuite pour un utilisateur. Au-delà, l'instance fonctionne mais affiche un rappel (système de confiance, cf. [Licensing](https://support.rallly.co/self-hosting/licensing)).
 
@@ -120,7 +119,7 @@ Limites assumées (à traiter dans les phases suivantes) :
 
 - [x] Phase 1 : Compose local (Traefik, Authentik, Rallly, PostgreSQL ×2, Garage, Mailpit)
 - [x] Phase 2 : SSO OIDC Authentik → Rallly, groupes + policies, invitation externe (blueprints déclaratifs)
-- [ ] Phase 2b : dashboard Traefik et Mailpit protégés par Authentik (forward-auth, groupe admin)
+- [x] Phase 2b : dashboard Traefik et Mailpit protégés par Authentik (forward-auth, groupe admin)
 - [ ] Phase 3 : durcissement complémentaire, scan Trivy commenté
 - [ ] Phase 4 : déploiement VM Énov (+ TLS), écarts documentés
 - [ ] Phase 5 : CI GitHub Actions (build + scan + push GHCR)
