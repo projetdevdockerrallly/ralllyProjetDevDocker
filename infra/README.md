@@ -122,4 +122,21 @@ Limites assumées (à traiter dans les phases suivantes) :
 - [x] Phase 2b : dashboard Traefik et Mailpit protégés par Authentik (forward-auth, groupe admin)
 - [ ] Phase 3 : durcissement complémentaire, scan Trivy commenté
 - [x] Phase 4 : déploiement VM Énov, écarts documentés → [docs/vm-enov.md](docs/vm-enov.md)
-- [ ] Phase 5 : CI GitHub Actions (build + scan + push GHCR)
+- [x] Phase 5 : CI GitHub Actions (`.github/workflows/projet-ci.yml`)
+
+## CI/CD
+
+Le workflow **Projet CI** s'exécute sur chaque push sur `main`, sur chaque PR, et à la demande :
+
+1. **compose** : valide `compose.yml` et ses surcharges (local, build, VM) avec un `.env` généré, ainsi que la syntaxe des scripts.
+2. **image** : build de l'image Rallly **du fork**, puis scan **Trivy** (HIGH/CRITICAL corrigeables, rapport
+   dans le résumé du job et en artefact). Sur `main` seulement, l'image est publiée sur
+   `ghcr.io/lllnnll/ralllyprojetdevdocker` (tags `main`, `latest`, `sha-xxxxxxx`).
+
+Déploiement de l'image publiée sur la VM : dans `/opt/rallly-projet/infra/.env`, mettre
+`RALLLY_IMAGE=ghcr.io/lllnnll/ralllyprojetdevdocker:main`, puis
+`docker compose -f compose.yml -f compose.vm.yml pull rallly && docker compose -f compose.yml -f compose.vm.yml up -d rallly`.
+
+Le scan ne bloque pas le pipeline (`exit-code: 0`). Les vulnérabilités relevées viennent de l'image de base
+Node et des dépendances upstream de Rallly : elles sont suivies dans le rapport, pas masquées.
+Les workflows d'origine de Rallly sont conservés dans `.github/workflows-upstream/` sans être exécutés.
