@@ -1,6 +1,7 @@
-# Stack locale : Traefik (reverse proxy) -> Rallly (+ Postgres, Mailpit).
+# Stack locale : Traefik (reverse proxy) -> Authentik (SSO) et Rallly (+ Postgres, Mailpit).
 # Démarrage : cp .env.example .env (puis remplir), puis docker compose up -d --build
-# URLs : http://rallly.localhost (app) et http://mail.localhost (emails reçus)
+# URLs : http://rallly.localhost (app), http://auth.localhost (Authentik, compte akadmin)
+#        et http://mail.localhost (emails reçus)
 # Seul Traefik publie un port : tout le reste n'est joignable que via le réseau Docker.
 services:
   traefik:
@@ -17,6 +18,79 @@ services:
     volumes:
       # Traefik lit l'API Docker pour trouver les conteneurs ; lecture seule
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      default:
+        # Dans un conteneur, "auth.localhost" pointerait sur lui-même : cet alias
+        # fait résoudre ce nom vers Traefik, pour que Rallly joigne Authentik
+        # avec la même URL que le navigateur (indispensable pour OIDC).
+        aliases:
+          - auth.localhost
+    security_opt:
+      - no-new-privileges:true
+
+  # --- Authentik (fournisseur d'identité OIDC), d'après https://goauthentik.io/docker-compose.yml ---
+  authentik_db:
+    image: postgres:16-alpine
+    restart: always
+    volumes:
+      - authentik-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=authentik
+      - POSTGRES_USER=authentik
+      - POSTGRES_PASSWORD=${AUTHENTIK_DB_PASSWORD:?AUTHENTIK_DB_PASSWORD manquant dans .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  authentik_server:
+    image: ghcr.io/goauthentik/server:2026.8.5
+    command: server
+    restart: always
+    depends_on:
+      authentik_db:
+        condition: service_healthy
+    environment: &authentik-env
+      AUTHENTIK_POSTGRESQL__HOST: authentik_db
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY manquant dans .env}
+      # Compte admin "akadmin" créé au premier démarrage (pas d'assistant manuel)
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:?AUTHENTIK_BOOTSTRAP_PASSWORD manquant dans .env}
+      AUTHENTIK_BOOTSTRAP_EMAIL: admin@auth.localhost
+      # Emails (invitations, récupération de mot de passe) capturés par Mailpit
+      AUTHENTIK_EMAIL__HOST: mailpit
+      AUTHENTIK_EMAIL__PORT: 1025
+      AUTHENTIK_EMAIL__USE_TLS: "false"
+      AUTHENTIK_EMAIL__FROM: authentik@auth.localhost
+    shm_size: 512mb
+    volumes:
+      - authentik-data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.authentik.rule=Host(`auth.localhost`)
+      - traefik.http.services.authentik.loadbalancer.server.port=9000
+    security_opt:
+      - no-new-privileges:true
+
+  authentik_worker:
+    image: ghcr.io/goauthentik/server:2026.8.5
+    command: worker
+    restart: always
+    depends_on:
+      authentik_db:
+        condition: service_healthy
+    environment: *authentik-env
+    shm_size: 512mb
+    # Le compose officiel lance le worker en root avec le socket Docker, pour que
+    # Authentik gère lui-même des "outposts". Le SSO OIDC n'en a pas besoin : on
+    # retire les deux (surface d'attaque réduite).
+    volumes:
+      - authentik-data:/data
     security_opt:
       - no-new-privileges:true
 
@@ -66,6 +140,12 @@ services:
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
       - SMTP_SECURE=false
+      # SSO via Authentik. Même URL que le navigateur (cf. alias réseau de Traefik).
+      # Tant que l'ID et le secret sont vides, Rallly désactive simplement le bouton OIDC.
+      - OIDC_NAME=Authentik
+      - OIDC_DISCOVERY_URL=http://auth.localhost/application/o/rallly/.well-known/openid-configuration
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
     labels:
       - traefik.enable=true
       - traefik.http.routers.rallly.rule=Host(`rallly.localhost`)
@@ -75,4 +155,8 @@ services:
 
 volumes:
   db-data:
+    driver: local
+  authentik-db-data:
+    driver: local
+  authentik-data:
     driver: local
