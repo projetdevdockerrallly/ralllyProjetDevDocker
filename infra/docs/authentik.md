@@ -91,6 +91,8 @@ Le flux `rallly-invitation` comprend les étapes suivantes :
 
 ## Pièges rencontrés
 
+- **Modification d'un blueprint non prise en compte (Docker Desktop / Windows).** La surveillance
+  des fichiers ne traverse pas toujours le montage : `docker compose restart authentik-worker`.
 - **Issuer différent entre conteneur et navigateur.** Rallly doit joindre Authentik par la même URL
   que le navigateur. D'où les alias réseau `auth.<DOMAIN>` portés par Traefik dans `compose.yml`.
 - **Redirect URI stricte.** Elle doit correspondre exactement à `RALLLY_URL`, port compris si `HTTP_PORT≠80`.

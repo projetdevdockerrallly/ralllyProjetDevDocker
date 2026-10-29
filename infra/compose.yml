@@ -205,6 +205,8 @@ services:
     image: ${RALLLY_IMAGE:-lukevella/rallly:4}
     environment:
       NEXT_PUBLIC_BASE_URL: ${RALLLY_URL}
+      # warn par défaut (image) ; RALLLY_LOG_LEVEL=debug dans .env pour diagnostiquer
+      LOG_LEVEL: ${RALLLY_LOG_LEVEL:-warn}
       DATABASE_URL: postgres://rallly:${RALLLY_DB_PASSWORD}@rallly-db:5432/rallly
       SECRET_PASSWORD: ${RALLLY_SECRET_PASSWORD:?RALLLY_SECRET_PASSWORD manquant (32 caractères min.)}
       # Rallly valide ces champs comme e-mails : une valeur vide fait échouer
