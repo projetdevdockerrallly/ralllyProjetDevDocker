@@ -121,5 +121,5 @@ Limites assumées (à traiter dans les phases suivantes) :
 - [x] Phase 2 : SSO OIDC Authentik → Rallly, groupes + policies, invitation externe (blueprints déclaratifs)
 - [x] Phase 2b : dashboard Traefik et Mailpit protégés par Authentik (forward-auth, groupe admin)
 - [ ] Phase 3 : durcissement complémentaire, scan Trivy commenté
-- [ ] Phase 4 : déploiement VM Énov, écarts documentés → [docs/vm-enov.md](docs/vm-enov.md)
+- [x] Phase 4 : déploiement VM Énov, écarts documentés → [docs/vm-enov.md](docs/vm-enov.md)
 - [ ] Phase 5 : CI GitHub Actions (build + scan + push GHCR)

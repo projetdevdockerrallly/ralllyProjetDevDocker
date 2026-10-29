@@ -75,6 +75,14 @@ Seuls les éléments suivants changent :
 
 ## 5. Limites assumées et pièges
 
+- **Premier démarrage : Rallly en boucle « redirection vers la connexion »** (`INVALID_OAUTH_CONFIGURATION`).
+  Rallly a interrogé Authentik avant que le blueprint ait créé le provider (discovery en 404), et il garde
+  cet échec en mémoire. Le script attend une discovery en 200 puis redémarre Rallly ; à la main :
+  `docker compose -f compose.yml -f compose.vm.yml restart rallly`.
+- **Chrome bascule en `https://`** (mode HTTPS-First) et affiche une erreur : retaper `http://` explicitement.
+- **Session NetBird expirée** (`netbird status` → `NeedsLogin`) : SSH et pages web passent en timeout, et une
+  installation en cours est coupée. Relancer `netbird up --management-url https://netbird.enov.icu:4443`.
+  Toujours lancer les longues opérations dans `tmux` sur la VM, et vérifier `netbird status` juste avant la démo.
 - **DNS rebinding.** Certains résolveurs (box, DNS d'entreprise) refusent qu'un nom public comme
   `sslip.io` renvoie une IP privée. Dans ce cas, utiliser un autre DNS (1.1.1.1) ou ajouter les quatre
   noms au fichier hosts.

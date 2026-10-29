@@ -29,6 +29,18 @@ HOST_MTU=$(cat "/sys/class/net/$IFACE/mtu")
 DOMAIN=${DOMAIN:-${VM_IP}.sslip.io}
 log "Interface $IFACE, IP $VM_IP, MTU $HOST_MTU, domaine $DOMAIN"
 
+# --- DNS ----------------------------------------------------------------------
+# Les VM Énov sont livrées sans DNS (ETH0_DNS vide dans le contexte OpenNebula) :
+# aucune résolution de nom possible (apt, git, registres Docker).
+if ! getent hosts github.com >/dev/null 2>&1; then
+  log "Aucun DNS fonctionnel : configuration de 1.1.1.1 / 8.8.8.8 (systemd-resolved)"
+  mkdir -p /etc/systemd/resolved.conf.d
+  printf '[Resolve]\nDNS=1.1.1.1 8.8.8.8\nFallbackDNS=9.9.9.9\n' > /etc/systemd/resolved.conf.d/dns.conf
+  systemctl restart systemd-resolved
+  sleep 2
+  getent hosts github.com >/dev/null || { echo "Toujours pas de résolution DNS : la VM a-t-elle accès à Internet ? (ping 1.1.1.1)" >&2; exit 1; }
+fi
+
 # --- Paquets de base ---------------------------------------------------------
 log "Paquets de base"
 export DEBIAN_FRONTEND=noninteractive
@@ -97,7 +109,24 @@ log "Démarrage de la stack"
 docker compose -f compose.yml -f compose.vm.yml pull -q
 docker compose -f compose.yml -f compose.vm.yml up -d --remove-orphans
 
-log "Terminé. Patienter 1 à 2 min (premier démarrage d'Authentik)."
+# Rallly lit la discovery OIDC d'Authentik et garde l'échec en mémoire si le
+# blueprint n'a pas encore créé le provider : on attend qu'il réponde 200,
+# puis on redémarre Rallly.
+log "Attente de la discovery OIDC d'Authentik (blueprints)…"
+for i in $(seq 1 60); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: auth.${DOMAIN}" \
+    http://localhost/application/o/rallly/.well-known/openid-configuration || true)
+  [ "$code" = "200" ] && break
+  sleep 5
+done
+if [ "$code" = "200" ]; then
+  docker compose -f compose.yml -f compose.vm.yml restart rallly >/dev/null
+  log "SSO prêt (discovery 200), Rallly redémarré."
+else
+  echo "Discovery OIDC toujours en $code après 5 min : vérifier 'docker compose logs authentik-worker'." >&2
+fi
+
+log "Terminé."
 cat <<EOF
 
   Rallly     : http://rallly.${DOMAIN}
