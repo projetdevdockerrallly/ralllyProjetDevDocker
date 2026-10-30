@@ -211,6 +211,33 @@ services:
       start_interval: 5s
     networks: [rallly_backend]
 
+  # Attend que la discovery OIDC d'Authentik réponde 200 (provider créé par le
+  # blueprint) avant de démarrer Rallly. Sans ça, sur une installation neuve,
+  # Rallly interroge Authentik trop tôt (404), garde l'échec en mémoire et la
+  # page de connexion boucle (INVALID_OAUTH_CONFIGURATION).
+  sso-ready:
+    image: axllent/mailpit:${MAILPIT_TAG:-v1.31.4}   # réutilise une image légère avec wget
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        url="${AUTHENTIK_URL}/application/o/rallly/.well-known/openid-configuration"
+        echo "Attente de $$url ..."
+        for i in $$(seq 1 120); do
+          if wget -q -O /dev/null "$$url"; then echo "SSO prêt"; exit 0; fi
+          sleep 5
+        done
+        echo "Discovery OIDC indisponible après 10 min (voir: docker compose logs authentik-worker)" >&2
+        exit 1
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      traefik:
+        condition: service_healthy
+      authentik-server:
+        condition: service_started
+    networks: [proxy]
+
   rallly:
     <<: *hardening
     # Image officielle par défaut ; image du fork via compose.build.yml (local)
@@ -251,6 +278,8 @@ services:
         condition: service_healthy
       garage:
         condition: service_healthy
+      sso-ready:
+        condition: service_completed_successfully
     networks: [proxy, rallly_backend, mail]
     labels:
       - traefik.enable=true

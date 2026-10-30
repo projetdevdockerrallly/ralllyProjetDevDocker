@@ -5,9 +5,9 @@ Chaque section ci-dessous tient lieu d'issue : contexte, périmètre, critères 
 
 | # | Feature | Type | Ancrage upstream | Branche | Responsable | État |
 |---|---|---|---|---|---|---|
-| 1 | [Block voting on past dates/times](#1-catalog-5--block-voting-on-past-datestimes) | Catalogue n°5 | [#1677](https://github.com/lukevella/rallly/issues/1677) | `feat/past-options` | _à définir_ | ⏳ À faire |
-| 2 | [Restrict comments to signed-in users](#2-catalog-9--variant--restrict-comments-to-signed-in-users) | Catalogue n°9 (variante) | [#224](https://github.com/lukevella/rallly/discussions/224) | `feat/comments-auth` | _à définir_ | ⏳ À faire |
-| 3 | [Map Authentik groups to Rallly permissions](#3-free-feature--map-authentik-oidc-groups-to-rallly-permissions) | Feature libre | [#3639](https://github.com/lukevella/rallly/discussions/3639) | `feat/oidc-groups` | _à définir_ | ⏳ À faire |
+| 1 | [Block voting on past dates/times](#1-catalog-5--block-voting-on-past-datestimes) | Catalogue n°5 | [#1677](https://github.com/lukevella/rallly/issues/1677) | `feature/block-past-options` | _à définir_ | ⏳ À faire |
+| 2 | [Restrict comments to signed-in users](#2-catalog-9--variant--restrict-comments-to-signed-in-users) | Catalogue n°9 (variante) | [#224](https://github.com/lukevella/rallly/discussions/224) | `feature/comments-signed-in-only` | _à définir_ | ⏳ À faire |
+| 3 | [Map Authentik groups to Rallly permissions](#3-free-feature--map-authentik-oidc-groups-to-rallly-permissions) | Feature libre | [#3639](https://github.com/lukevella/rallly/discussions/3639) | `feature/oidc-group-permissions` | _à définir_ | ⏳ À faire |
 
 **Façon de travailler.** Une branche par feature depuis `main`, puis une PR vers `main` : la CI construit et scanne
 l'image. Les commits de chaque feature restent séparés de l'infra, pour permettre une PR upstream (bonus §4.4).
