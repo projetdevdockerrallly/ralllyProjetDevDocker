@@ -70,6 +70,8 @@ services:
     shm_size: 512mb
     volumes:
       - authentik-data:/data
+      # Config Authentik versionnée (flows, stages...), appliquée au démarrage
+      - ./authentik/blueprints:/blueprints/custom:ro
     labels:
       - traefik.enable=true
       - traefik.http.routers.authentik.rule=Host(`auth.localhost`)
@@ -91,6 +93,8 @@ services:
     # retire les deux (surface d'attaque réduite).
     volumes:
       - authentik-data:/data
+      # Config Authentik versionnée (flows, stages...), appliquée au démarrage
+      - ./authentik/blueprints:/blueprints/custom:ro
     security_opt:
       - no-new-privileges:true
 

@@ -1,0 +1,158 @@
+# Parcours d'inscription sur invitation pour les utilisateurs externes.
+# Adapté de /blueprints/example/flows-invitation-enrollment-minimal.yaml (fourni par Authentik),
+# avec en plus l'ajout automatique de l'invité au groupe qui a accès à Rallly.
+# Appliqué automatiquement au démarrage d'Authentik (monté dans /blueprints/custom).
+# Les invitations elles-mêmes se créent dans Directory > Invitations, avec ce flow.
+version: 1
+metadata:
+  name: Rallly - Invitation externe
+entries:
+  - identifiers:
+      slug: invitation-enrollment
+    model: authentik_flows.flow
+    id: flow
+    attrs:
+      name: Invitation externe
+      title: Bienvenue ! Créez votre compte
+      designation: enrollment
+      # Ouvrir le lien en étant déjà connecté est refusé : à tester en navigation privée
+      authentication: require_unauthenticated
+
+  # Sans jeton d'invitation valide (?itoken=...), le parcours s'arrête ici
+  - identifiers:
+      name: invitation-enrollment-invitation
+    id: invitation-stage
+    model: authentik_stages_invitation.invitationstage
+    attrs:
+      continue_flow_without_invitation: false
+
+  - identifiers:
+      name: invitation-enrollment-field-username
+    id: field-username
+    model: authentik_stages_prompt.prompt
+    attrs:
+      field_key: username
+      label: Nom d'utilisateur
+      type: username
+      required: true
+      placeholder: Nom d'utilisateur
+      order: 0
+
+  - identifiers:
+      name: invitation-enrollment-field-password
+    id: field-password
+    model: authentik_stages_prompt.prompt
+    attrs:
+      field_key: password
+      label: Mot de passe
+      type: password
+      required: true
+      placeholder: Mot de passe
+      order: 1
+
+  - identifiers:
+      name: invitation-enrollment-field-password-repeat
+    id: field-password-repeat
+    model: authentik_stages_prompt.prompt
+    attrs:
+      field_key: password_repeat
+      label: Mot de passe (confirmation)
+      type: password
+      required: true
+      placeholder: Mot de passe (confirmation)
+      order: 2
+
+  # Nom et email obligatoires : Rallly refuse un profil OIDC sans nom (name_is_missing)
+  - identifiers:
+      name: invitation-enrollment-field-name
+    id: field-name
+    model: authentik_stages_prompt.prompt
+    attrs:
+      field_key: name
+      label: Nom complet
+      type: text
+      required: true
+      placeholder: Nom complet
+      order: 3
+
+  - identifiers:
+      name: invitation-enrollment-field-email
+    id: field-email
+    model: authentik_stages_prompt.prompt
+    attrs:
+      field_key: email
+      label: Email
+      type: email
+      required: true
+      placeholder: Email
+      order: 4
+
+  - identifiers:
+      name: invitation-enrollment-prompt
+    id: prompt-stage
+    model: authentik_stages_prompt.promptstage
+    attrs:
+      fields:
+        - !KeyOf field-username
+        - !KeyOf field-password
+        - !KeyOf field-password-repeat
+        - !KeyOf field-name
+        - !KeyOf field-email
+
+  - identifiers:
+      name: invitation-enrollment-user-write
+    id: user-write-stage
+    model: authentik_stages_user_write.userwritestage
+    attrs:
+      user_creation_mode: always_create
+      user_type: external
+      user_path_template: users/external
+      # L'invité rejoint le groupe autorisé sur l'application Rallly
+      create_users_group: !Find [authentik_core.group, [name, "authentik Agent-Users"]]
+
+  - identifiers:
+      name: invitation-enrollment-user-login
+    id: user-login-stage
+    model: authentik_stages_user_login.userloginstage
+
+  # Un externe n'a pas accès au portail Authentik : on l'envoie directement sur Rallly
+  - identifiers:
+      name: invitation-enrollment-redirect-rallly
+    id: redirect-stage
+    model: authentik_stages_redirect.redirectstage
+    attrs:
+      mode: static
+      target_static: !Format ["%s/login", !Env [RALLLY_BASE_URL, "http://rallly.localhost"]]
+
+  - identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf invitation-stage
+      order: 0
+    model: authentik_flows.flowstagebinding
+    attrs:
+      evaluate_on_plan: true
+      re_evaluate_policies: true
+
+  - identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf prompt-stage
+      order: 10
+    model: authentik_flows.flowstagebinding
+
+  - identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf user-write-stage
+      order: 20
+    model: authentik_flows.flowstagebinding
+
+  - identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf user-login-stage
+      order: 100
+    model: authentik_flows.flowstagebinding
+
+  - identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf redirect-stage
+      order: 110
+    model: authentik_flows.flowstagebinding
