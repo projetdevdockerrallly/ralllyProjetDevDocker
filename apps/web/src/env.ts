@@ -35,6 +35,14 @@ export const env = createEnv({
     OIDC_NAME_CLAIM_PATH: z.string().default("name"),
     OIDC_PICTURE_CLAIM_PATH: z.string().default("picture"),
     /**
+     * OIDC group mapping (optional). Comma-separated group names.
+     * - OIDC_ADMIN_GROUPS: members get the instance admin role on sign-in
+     * - OIDC_POLL_CREATOR_GROUPS: when set, only members can create polls
+     */
+    OIDC_GROUPS_CLAIM_PATH: z.string().default("groups"),
+    OIDC_ADMIN_GROUPS: z.string().optional(),
+    OIDC_POLL_CREATOR_GROUPS: z.string().optional(),
+    /**
      * Email Provider
      * Choose which service provider to use for sending emails.
      * Make sure to configure the corresponding environment variables.
@@ -278,6 +286,9 @@ export const env = createEnv({
     OIDC_EMAIL_CLAIM_PATH: process.env.OIDC_EMAIL_CLAIM_PATH,
     OIDC_NAME_CLAIM_PATH: process.env.OIDC_NAME_CLAIM_PATH,
     OIDC_PICTURE_CLAIM_PATH: process.env.OIDC_PICTURE_CLAIM_PATH,
+    OIDC_GROUPS_CLAIM_PATH: process.env.OIDC_GROUPS_CLAIM_PATH,
+    OIDC_ADMIN_GROUPS: process.env.OIDC_ADMIN_GROUPS,
+    OIDC_POLL_CREATOR_GROUPS: process.env.OIDC_POLL_CREATOR_GROUPS,
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_USER: process.env.SMTP_USER,

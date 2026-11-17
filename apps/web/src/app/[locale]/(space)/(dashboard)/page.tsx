@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { loadCanCreatePolls } from "@/features/oidc-groups/loaders";
 import { loadPollStatusCounts } from "@/features/poll/loaders";
 import {
   loadActiveSpace,
@@ -20,6 +21,7 @@ export default async function Page() {
     ]);
 
   const ability = defineAbilityForMember({ user: { id: user.id }, space });
+  const canCreatePolls = await loadCanCreatePolls();
 
   return (
     <DashboardHome
@@ -30,6 +32,7 @@ export default async function Page() {
       hasNoAccounts={hasNoAccounts}
       canManageBilling={ability.can("manage", "Billing")}
       canManageMembers={space.role === "admin"}
+      canCreatePolls={canCreatePolls}
     />
   );
 }

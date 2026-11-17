@@ -14,6 +14,7 @@ import { getConnectedConferencingProviders } from "@/features/conferencing/data"
 import type { PollConferencing } from "@/features/conferencing/schema";
 import { moderatedLinkText } from "@/features/conferencing/utils";
 import { moderateContent } from "@/features/moderation/mutations";
+import { getCanUserCreatePolls } from "@/features/oidc-groups/data";
 import { MAX_POLL_OPTIONS } from "@/features/poll/constants";
 import {
   getPollParticipant,
@@ -484,6 +485,17 @@ app.post(
       }
 
       organizerUserId = spaceMember.userId;
+    }
+
+    // OIDC_POLL_CREATOR_GROUPS: the organizer must be allowed to create polls.
+    if (!(await getCanUserCreatePolls(organizerUserId))) {
+      return c.json(
+        apiError(
+          "POLL_CREATION_FORBIDDEN",
+          "The organizer is not allowed to create polls on this instance.",
+        ),
+        403,
+      );
     }
 
     // Same gates as the app: the instance must offer the provider and the
