@@ -65,6 +65,9 @@ model User {
   // When the user was asked in-app for a review on a third-party site. The
   // ask shows once per user, so a set value means never ask again.
   reviewRequestedAt DateTime?   @map("review_requested_at")
+  // Groups from the OIDC provider (claim OIDC_GROUPS_CLAIM_PATH), refreshed on
+  // every OIDC sign-in. Drives OIDC_ADMIN_GROUPS / OIDC_POLL_CREATOR_GROUPS.
+  oidcGroups        String[]    @default([]) @map("oidc_groups")
 
   comments                Comment[]
   polls                   Poll[]

@@ -7,7 +7,7 @@ Chaque section ci-dessous tient lieu d'issue : contexte, périmètre, critères 
 |---|---|---|---|---|---|---|
 | 1 | [Block voting on past dates/times](#1-catalog-5--block-voting-on-past-datestimes) | Catalogue n°5 | [#1677](https://github.com/lukevella/rallly/issues/1677) | `FeatureNikita` | https://github.com/lukevella/rallly/issues/1677 | fini |
 | 2 | [Restrict comments to signed-in users](#2-catalog-9--variant--restrict-comments-to-signed-in-users) | Catalogue n°9 (variante) | [#224](https://github.com/lukevella/rallly/discussions/224) | `feature/comments-signed-in-only` | _à définir_ | ⏳ À faire |
-| 3 | [Map Authentik groups to Rallly permissions](#3-free-feature--map-authentik-oidc-groups-to-rallly-permissions) | Feature libre | [#3639](https://github.com/lukevella/rallly/discussions/3639) | `feature/oidc-group-permissions` | _à définir_ | ⏳ À faire |
+| 3 | [Map Authentik groups to Rallly permissions](#3-free-feature--map-authentik-oidc-groups-to-rallly-permissions) | Feature libre | [#3639](https://github.com/lukevella/rallly/discussions/3639) | `feature/oidc-group-permissions` | Gab | ✅ Implémentée (à valider en démo) |
 
 **Façon de travailler.** Une branche par feature depuis `main`, puis une PR vers `main` : la CI construit et scanne
 l'image. Les commits de chaque feature restent séparés de l'infra, pour permettre une PR upstream (bonus §4.4).
@@ -58,7 +58,7 @@ Move the predicate into a shared util (e.g. `apps/web/src/features/poll/utils.ts
 - [ ] A forged request (devtools/API) voting "yes" on the past slot is **rejected** server-side.
 - [ ] An existing participant edits their response: their old vote on the past slot is preserved, and future slots can change.
 - [ ] All-day date "today" is still votable for a user in America/Los_Angeles, and yesterday's date is not.
-- [ ] Unit tests for the shared predicate (time slot, all-day, time zone edge cases) and for the mutation refusal.
+- [x] Unit tests for the shared predicate (time slot, all-day, time zone edge cases) and for the mutation refusal.
 
 ### Tasks
 
@@ -184,13 +184,32 @@ providers (generic OIDC only); admin UI for group mappings.
 - [ ] Variables unset: behavior identical to upstream (no regression).
 - [ ] `.env.example`, `compose.yml` and docs updated (`OIDC_ADMIN_GROUPS=rallly-admins`, `OIDC_POLL_CREATOR_GROUPS=rallly-admins`).
 
+### Implementation (branch `feature/oidc-group-permissions`)
+
+| Where | What |
+|---|---|
+| `packages/database/prisma/models/user.prisma` + migration `20261117090000_add_user_oidc_groups` | `User.oidcGroups String[]` |
+| `apps/web/src/env.ts` | `OIDC_GROUPS_CLAIM_PATH`, `OIDC_ADMIN_GROUPS`, `OIDC_POLL_CREATOR_GROUPS` |
+| `apps/web/src/features/oidc-groups/` | pure rules (`utils.ts` + tests), DB read (`data.ts`), sync (`mutations.ts`), page loader (`loaders.ts`) |
+| `apps/web/src/lib/auth.ts` | `session.create.after` → `syncOidcGroups()`: reads the groups from the fresh ID token stored by Better-Auth on every OIDC sign-in, updates `oidcGroups` and `role` |
+| `trpc/routers/polls.ts` (`make`, `duplicate`), `api/v1` and `api/private` poll creation | server-side guard → `FORBIDDEN` / `403 POLL_CREATION_FORBIDDEN` |
+| `/new` page, home dashboard | explicit "You can't create polls" page, "Create" tile hidden |
+| `infra/compose.yml`, `infra/.env.example` | `RALLLY_OIDC_ADMIN_GROUPS` / `RALLLY_OIDC_POLL_CREATOR_GROUPS` (default `rallly-admins`) |
+
+Notes:
+- Authentik puts `groups` in the ID token (scope `profile`, `include_claims_in_id_token: true` in the blueprint).
+- With `OIDC_ADMIN_GROUPS` set, the IdP is the source of truth for the admin role: an admin removed from the group is demoted at their next sign-in.
+- The UI may show the previous role for up to 5 min (session cookie cache); the server-side checks always read the database.
+- Requires the fork image (`compose.build.yml` or the GHCR image): the official image ignores these variables.
+
 ### Tasks
 
-- [ ] Prisma schema (`oidcGroups`) + migration
-- [ ] Env vars in `env.ts`
-- [ ] Group mapping on every OIDC sign-in (role + groups)
-- [ ] Server-side guard in `createPoll`
-- [ ] Hide UI + message on `/new`
+- [x] Prisma schema (`oidcGroups`) + migration
+- [x] Env vars in `env.ts`
+- [x] Group mapping on every OIDC sign-in (role + groups)
+- [x] Server-side guard in `createPoll`
+- [x] Hide UI + message on `/new`
 - [ ] Unit tests
-- [ ] Infra wiring (`compose.yml`, `.env.example`) + docs + screenshots
+- [x] Infra wiring (`compose.yml`, `.env.example`) + docs
+- [ ] Screenshots
 - [ ] (Bonus) Upstream PR to `lukevella/rallly`

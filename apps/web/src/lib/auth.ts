@@ -32,6 +32,7 @@ import {
 } from "@/features/auth/utils";
 import { getStripe } from "@/features/billing/service";
 import { isRegistrationOpen } from "@/features/instance-settings/data";
+import { syncOidcGroups } from "@/features/oidc-groups/mutations";
 import { getUserLocaleByEmail } from "@/features/user/data";
 import type { UserDTO } from "@/features/user/schema";
 import { jobTitleFieldSchema } from "@/features/user/schema";
@@ -621,6 +622,11 @@ export const authLib = betterAuth({
     session: {
       create: {
         after: async (session) => {
+          // Awaited (not deferred) so the role and groups are in place before
+          // the first page after sign-in reads them. No-op without OIDC.
+          if (env.OIDC_CLIENT_ID) {
+            await syncOidcGroups(session.userId);
+          }
           after(async () => {
             const user = await prisma.user
               .update({
