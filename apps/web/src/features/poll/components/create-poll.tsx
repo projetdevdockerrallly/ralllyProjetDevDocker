@@ -29,6 +29,7 @@ import { SHARE_POLL_FLASH_KEY } from "@/features/poll/constants";
 import { useUser } from "@/features/user/client";
 import { UserDropdown } from "@/features/user/components/user-dropdown";
 import { Trans, useTranslation } from "@/i18n/client";
+import { wallTimeToInstant } from "@/lib/datetime/wall-time";
 import { setFlash } from "@/lib/flash/client";
 import { getBrowserTimeZone } from "@/lib/utils/date-time-utils";
 import { trpc } from "@/trpc/client";
@@ -147,6 +148,7 @@ export const CreatePoll = ({
       hideParticipants: false,
       enableComments: false,
       allowTentativeVotes: true,
+      deadline: "",
       duration: 60,
       lockTimeZone: false,
       allDay: false,
@@ -216,6 +218,9 @@ export const CreatePoll = ({
               hideScores: formData?.hideScores,
               allowTentativeVotes: formData?.allowTentativeVotes,
               requireParticipantEmail: formData?.requireParticipantEmail,
+              deadline: formData.deadline
+                ? wallTimeToInstant(formData.deadline, getBrowserTimeZone())
+                : null,
               options: required(formData?.options).map((option) => ({
                 startDate: option.type === "date" ? option.date : option.start,
                 endDate: option.type === "timeSlot" ? option.end : undefined,

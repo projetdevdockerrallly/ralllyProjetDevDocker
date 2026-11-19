@@ -7,6 +7,7 @@ import {
   BarChart2Icon,
   BellIcon,
   CalendarCheckIcon,
+  CalendarClockIcon,
   CalendarMinusIcon,
   CalendarPlusIcon,
   CircleStopIcon,
@@ -159,6 +160,7 @@ const iconByChange: Record<PollChange["field"], LucideIcon> = {
   description: AlignLeftIcon,
   location: MapPinIcon,
   conferencing: VideoIcon,
+  deadline: CalendarClockIcon,
   timeZone: GlobeIcon,
   hideParticipants: VenetianMaskIcon,
   hideScores: BarChart2Icon,
@@ -264,6 +266,23 @@ function ChangeDescription({ change }: { change: PollChange }) {
           components={{ b }}
         />
       );
+    case "deadline":
+      return change.action === "added" ? (
+        <Trans
+          i18nKey="pollActivityDeadlineAdded"
+          defaults="Voting deadline added"
+        />
+      ) : change.action === "removed" ? (
+        <Trans
+          i18nKey="pollActivityDeadlineRemoved"
+          defaults="Voting deadline removed"
+        />
+      ) : (
+        <Trans
+          i18nKey="pollActivityDeadlineChanged"
+          defaults="Voting deadline changed"
+        />
+      );
     case "timeZone":
       return (
         <Trans
@@ -356,7 +375,12 @@ function ActivityDescription({
         />
       );
     case "poll_closed":
-      return event.payload.reason === "auto" ? (
+      return event.payload.reason === "deadline" ? (
+        <Trans
+          i18nKey="pollActivityPollClosedDeadline"
+          defaults="Poll closed at its voting deadline"
+        />
+      ) : event.payload.reason === "auto" ? (
         <Trans
           i18nKey="pollActivityPollClosedAuto"
           defaults="Poll closed automatically"

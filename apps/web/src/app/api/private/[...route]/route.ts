@@ -77,6 +77,7 @@ function toPollResponseBody(poll: {
   title: string;
   description: string | null;
   location: string | null;
+  deadline: Date | null;
   timeZone: string | null;
   status: string;
   createdAt: Date;
@@ -89,6 +90,7 @@ function toPollResponseBody(poll: {
       title: poll.title,
       description: poll.description,
       location: poll.location,
+      deadline: poll.deadline?.toISOString() ?? null,
       timezone: poll.timeZone,
       status: poll.status,
       createdAt: poll.createdAt.toISOString(),
@@ -418,6 +420,7 @@ app.post(
         title: input.title,
         description: input.description,
         location: input.location,
+        deadline: input.deadline ? new Date(input.deadline) : null,
         requireParticipantEmail: input.requireEmail,
         hideParticipants: input.hideParticipants,
         hideScores: input.hideScores,
@@ -490,6 +493,7 @@ app.post(
       title: input.title,
       description: input.description,
       location: input.location,
+      deadline: input.deadline ? new Date(input.deadline) : null,
       timeZone,
       requireParticipantEmail: input.requireEmail,
       hideParticipants: input.hideParticipants,
@@ -614,6 +618,7 @@ app.get(
         title: true,
         description: true,
         location: true,
+        deadline: true,
         timeZone: true,
         status: true,
         createdAt: true,

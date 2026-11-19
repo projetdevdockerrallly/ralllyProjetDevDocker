@@ -5,15 +5,28 @@ import type { AuthorizedSpaceId } from "@/features/space/types";
 // environment on import. Stub the env with nothing set.
 vi.mock("@/env", () => ({ env: {} }));
 
-import { closePoll, deleteInactivePolls, setPollMuted } from "./mutations";
+import {
+  autoCloseDeadlinePolls,
+  closePoll,
+  deleteInactivePolls,
+  setPollMuted,
+} from "./mutations";
 
-const { mockUpdateMany, mockFindFirst, mockUpdate, mockActivityCreateMany } =
-  vi.hoisted(() => ({
-    mockUpdateMany: vi.fn(),
-    mockFindFirst: vi.fn(),
-    mockUpdate: vi.fn(),
-    mockActivityCreateMany: vi.fn(),
-  }));
+const {
+  mockUpdateMany,
+  mockFindFirst,
+  mockUpdate,
+  mockActivityCreateMany,
+  mockQueryRaw,
+  mockScheduleWebhookDispatch,
+} = vi.hoisted(() => ({
+  mockUpdateMany: vi.fn(),
+  mockFindFirst: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockActivityCreateMany: vi.fn(),
+  mockQueryRaw: vi.fn(),
+  mockScheduleWebhookDispatch: vi.fn(),
+}));
 
 vi.mock("@rallly/database", () => {
   const client = {
@@ -25,6 +38,7 @@ vi.mock("@rallly/database", () => {
     pollActivity: {
       createMany: mockActivityCreateMany,
     },
+    $queryRaw: mockQueryRaw,
   };
   return {
     prisma: {
@@ -33,6 +47,10 @@ vi.mock("@rallly/database", () => {
     },
   };
 });
+
+vi.mock("@/features/webhook/mutations", () => ({
+  scheduleWebhookDispatch: mockScheduleWebhookDispatch,
+}));
 
 const NOW = new Date("2026-07-21T12:00:00Z");
 
@@ -273,6 +291,32 @@ describe("closePoll", () => {
         where: { id: "p1", spaceId, deletedAt: null },
       }),
     );
+  });
+});
+
+describe("autoCloseDeadlinePolls", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("records deadline closures and schedules their webhook dispatch", async () => {
+    mockQueryRaw.mockResolvedValue([{ id: "p1" }]);
+
+    const closed = await autoCloseDeadlinePolls();
+
+    expect(closed).toBe(1);
+    expect(mockActivityCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          pollId: "p1",
+          type: "poll_closed",
+          payload: { reason: "deadline" },
+        }),
+      ],
+    });
+    expect(mockScheduleWebhookDispatch).toHaveBeenCalledWith({
+      pollId: "p1",
+    });
   });
 });
 

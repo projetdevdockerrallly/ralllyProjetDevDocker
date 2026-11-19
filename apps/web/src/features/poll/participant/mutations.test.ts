@@ -15,7 +15,7 @@ vi.mock("@/features/webhook/mutations", () => ({
   scheduleWebhookDispatch: vi.fn(),
 }));
 
-const { tx } = vi.hoisted(() => ({
+const { tx, mockPollFindUnique } = vi.hoisted(() => ({
   tx: {
     $queryRaw: vi.fn(),
     option: { findMany: vi.fn() },
@@ -27,13 +27,12 @@ const { tx } = vi.hoisted(() => ({
     },
     vote: { deleteMany: vi.fn(), createMany: vi.fn() },
   },
+  mockPollFindUnique: vi.fn().mockResolvedValue({ user: null, space: null }),
 }));
 
 vi.mock("@rallly/database", () => ({
   prisma: {
-    poll: {
-      findUnique: vi.fn().mockResolvedValue({ user: null, space: null }),
-    },
+    poll: { findUnique: mockPollFindUnique },
     $transaction: (fn: (client: typeof tx) => unknown) => fn(tx),
   },
 }));
@@ -46,8 +45,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
   tx.$queryRaw.mockResolvedValue([
-    { status: "open", deleted: false, allow_tentative_votes: true },
+    {
+      status: "open",
+      deleted: false,
+      allow_tentative_votes: true,
+      deadline_passed: false,
+    },
   ]);
+  mockPollFindUnique.mockResolvedValue({ user: null, space: null });
   tx.option.findMany.mockResolvedValue([
     { id: "past", startTime: new Date("2026-06-10T09:00:00Z"), duration: 60 },
     { id: "future", startTime: new Date("2026-06-11T09:00:00Z"), duration: 60 },
@@ -114,5 +119,26 @@ describe("updateParticipantVotes", () => {
         },
       ],
     });
+  });
+
+  it("refuses vote changes after the deadline even before the poll is closed", async () => {
+    tx.$queryRaw.mockResolvedValue([
+      {
+        status: "open",
+        deleted: false,
+        allow_tentative_votes: true,
+        deadline_passed: true,
+      },
+    ]);
+
+    const result = await updateParticipantVotes({
+      pollId: "poll-1",
+      participantId: "participant-1",
+      actorUserId: undefined,
+      votes: [],
+    });
+
+    expect(result).toEqual({ ok: false, reason: "closed" });
+    expect(tx.$queryRaw).toHaveBeenCalledOnce();
   });
 });

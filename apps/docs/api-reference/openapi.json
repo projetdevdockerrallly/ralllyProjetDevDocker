@@ -147,6 +147,19 @@
             ],
             "example": "Europe/London"
           },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Voting deadline as an ISO 8601 instant in UTC, if set.",
+            "example": "2027-03-01T17:00:00.000Z"
+          },
           "status": {
             "$ref": "#/components/schemas/PollStatus"
           },
@@ -229,6 +242,7 @@
           "location",
           "conferencing",
           "timeZone",
+          "deadline",
           "status",
           "kind",
           "createdAt",
@@ -420,6 +434,12 @@
             "type": "string",
             "maxLength": 255
           },
+          "deadline": {
+            "description": "Optional voting deadline as an ISO 8601 timestamp with an offset. Responses become read-only after this instant.",
+            "example": "2027-03-01T17:00:00Z",
+            "type": "string",
+            "format": "date-time"
+          },
           "conferencing": {
             "description": "The video call for the event. `zoom`, `meet`, `teams` and `webex` need the organizer to have connected that account in their Conferencing settings; the meeting link is created when the poll is finalized. `custom` names any call, with an optional link participants join with.",
             "examples": [
@@ -604,6 +624,12 @@
             "example": "Conference Room A",
             "type": "string",
             "maxLength": 255
+          },
+          "deadline": {
+            "description": "Optional voting deadline as an ISO 8601 timestamp with an offset. Responses become read-only after this instant.",
+            "example": "2027-03-01T17:00:00Z",
+            "type": "string",
+            "format": "date-time"
           },
           "conferencing": {
             "description": "The video call for the event. `zoom`, `meet`, `teams` and `webex` need the organizer to have connected that account in their Conferencing settings; the meeting link is created when the poll is finalized. `custom` names any call, with an optional link participants join with.",

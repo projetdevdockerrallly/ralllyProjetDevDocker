@@ -6,6 +6,7 @@ const prior = {
   description: null,
   location: "Cafe",
   conferencing: null,
+  deadline: null,
   timeZone: "Europe/London",
   hideParticipants: false,
   hideScores: false,
@@ -67,6 +68,35 @@ describe("getPollChanges", () => {
   it("records a time zone change", () => {
     expect(getPollChanges({ prior, next: { timeZone: null } })).toEqual([
       { field: "timeZone", from: "Europe/London" },
+    ]);
+  });
+
+  it("records a poll deadline being added, changed, or removed", () => {
+    const deadline = new Date("2026-11-25T18:00:00.000Z");
+    expect(
+      getPollChanges({
+        prior,
+        next: { ...unchanged, deadline },
+      }),
+    ).toEqual([
+      {
+        field: "deadline",
+        action: "added",
+        from: null,
+      },
+    ]);
+
+    expect(
+      getPollChanges({
+        prior: { ...prior, deadline },
+        next: { ...unchanged, deadline: null },
+      }),
+    ).toEqual([
+      {
+        field: "deadline",
+        action: "removed",
+        from: deadline.toISOString(),
+      },
     ]);
   });
 

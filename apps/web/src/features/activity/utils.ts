@@ -30,6 +30,7 @@ export function getPollChanges({
     description: string | null;
     location: string | null;
     conferencing: PollConferencing | null;
+    deadline: Date | null;
     timeZone: string | null;
   } & PollSettings;
   next: {
@@ -37,6 +38,7 @@ export function getPollChanges({
     description?: string;
     location?: string;
     conferencing?: PollConferencing | null;
+    deadline?: Date | null;
     timeZone: string | null;
   } & Partial<PollSettings>;
 }): PollChange[] {
@@ -66,6 +68,17 @@ export function getPollChanges({
       field: "conferencing",
       action: getChangeAction(prior.conferencing, next.conferencing),
       from: prior.conferencing,
+    });
+  }
+
+  if (
+    next.deadline !== undefined &&
+    next.deadline?.getTime() !== prior.deadline?.getTime()
+  ) {
+    changes.push({
+      field: "deadline",
+      action: getChangeAction(prior.deadline, next.deadline),
+      from: prior.deadline?.toISOString() ?? null,
     });
   }
 

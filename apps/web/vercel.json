@@ -12,6 +12,10 @@
       "schedule": "30 5 * * *"
     },
     {
+      "path": "/api/house-keeping/auto-close-deadline-polls",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/house-keeping/delete-inactive-polls",
       "schedule": "0 6 * * *"
     },

@@ -32,6 +32,7 @@ export type VotePageView = {
     conferencing: PollConferencing | null;
     status: PollStatus;
     closedReason: PollClosedReason | null;
+    deadline: Date | null;
     allowTentativeVotes: boolean;
     timeZone: string | null;
     userId: string | null;

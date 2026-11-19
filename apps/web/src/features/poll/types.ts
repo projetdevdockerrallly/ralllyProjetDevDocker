@@ -12,6 +12,7 @@ export type PollDetails = {
   conferencing: PollConferencing | null;
   description: string | null;
   createdAt: Date;
+  deadline: Date | null;
   status: PollStatus;
   closedReason: PollClosedReason | null;
   hideParticipants: boolean;

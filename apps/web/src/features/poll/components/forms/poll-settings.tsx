@@ -9,7 +9,8 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@rallly/ui/field";
-import { FormField } from "@rallly/ui/form";
+import { FormField, FormMessage } from "@rallly/ui/form";
+import { Input } from "@rallly/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import { Switch } from "@rallly/ui/switch";
 import { VoteIcon } from "@rallly/ui/vote-icon";
 import {
   BarChart2Icon,
+  CalendarClockIcon,
   ListChecksIcon,
   MailIcon,
   MessageCircleIcon,
@@ -32,7 +34,7 @@ import { showPayWall, useIsFree } from "@/features/billing/client";
 import { ProBadge } from "@/features/billing/components/pro-badge";
 import type { PollSettingsFormData } from "@/features/poll/components/forms/types";
 import type { VoteType } from "@/features/poll/constants";
-import { Trans } from "@/i18n/client";
+import { Trans, useTranslation } from "@/i18n/client";
 
 /**
  * Each answer as its icon plus its name, so the choice shows exactly what a
@@ -72,6 +74,7 @@ export const PollSettingsForm = ({
   hasTentativeVotes?: boolean;
 }>) => {
   const form = useFormContext<PollSettingsFormData>();
+  const { t } = useTranslation();
   const isFree = useIsFree();
 
   return (
@@ -83,6 +86,46 @@ export const PollSettingsForm = ({
       </div>
       <CardContent>
         <FieldGroup variant="divided">
+          <FormField
+            control={form.control}
+            name="deadline"
+            render={({ field }) => (
+              <Field
+                orientation="responsive"
+                className="@md/field-group:gap-2 gap-4"
+              >
+                <SettingIcon>
+                  <CalendarClockIcon />
+                </SettingIcon>
+                <FieldContent>
+                  <FieldLabel htmlFor="poll-deadline">
+                    <Trans
+                      i18nKey="pollDeadlineTitle"
+                      defaults="Voting deadline"
+                    />
+                  </FieldLabel>
+                  <FieldDescription>
+                    <Trans
+                      i18nKey="pollDeadlineDescription"
+                      defaults="Participants can submit and update responses until this time. The time is in your local time zone. Leave blank for no deadline."
+                    />
+                  </FieldDescription>
+                </FieldContent>
+                <div>
+                  <Input
+                    id="poll-deadline"
+                    type="datetime-local"
+                    {...field}
+                    value={field.value ?? ""}
+                    aria-label={t("pollDeadlineTitle", {
+                      defaultValue: "Voting deadline",
+                    })}
+                  />
+                  <FormMessage />
+                </div>
+              </Field>
+            )}
+          />
           <FormField
             control={form.control}
             name="requireParticipantEmail"

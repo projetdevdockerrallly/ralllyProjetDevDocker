@@ -27,6 +27,7 @@ export type PollSettingsFormData = {
   hideScores: boolean;
   enableComments: boolean;
   allowTentativeVotes: boolean;
+  deadline: string;
 };
 
 export type NewEventData = PollDetailsData &

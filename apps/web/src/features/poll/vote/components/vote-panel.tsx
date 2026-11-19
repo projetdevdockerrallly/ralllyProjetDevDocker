@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useDeadlinePassed } from "@/features/poll/client";
 import { isOptionPast } from "@/features/poll/utils";
 import { VoteEmptyState } from "@/features/poll/vote/components/vote-empty-state";
 import { VoteForm } from "@/features/poll/vote/components/vote-form";
@@ -39,6 +40,7 @@ export function VotePanel({
   user: UserDTO | null;
 }) {
   const hydrated = useHydrated();
+  const deadlinePassed = useDeadlinePassed(poll.deadline);
   const [view, setView] = React.useState<VoteViewId>("list");
   const [hidePast, setHidePast] = React.useState(false);
 
@@ -54,6 +56,7 @@ export function VotePanel({
     ? ["list", "week"]
     : ["list", "calendar"];
   const activeView = views.includes(view) ? view : "list";
+  const votingAllowed = canVote && !deadlinePassed;
 
   // Safe to read the clock here: the panel renders only after hydration, so
   // this never runs during a server render.
@@ -79,7 +82,7 @@ export function VotePanel({
     results: visibleResults,
     participantCount,
     response,
-    canVote,
+    canVote: votingAllowed,
     pastOptionIds,
   };
 
@@ -90,7 +93,7 @@ export function VotePanel({
         requireParticipantEmail={requireParticipantEmail}
         results={results}
         response={response}
-        canVote={canVote}
+        canVote={votingAllowed}
       >
         <VoteOutcome poll={poll}>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -121,7 +124,7 @@ export function VotePanel({
               poll={poll}
               results={results}
               response={response}
-              canVote={canVote}
+              canVote={votingAllowed}
             />
           </div>
         </VoteOutcome>

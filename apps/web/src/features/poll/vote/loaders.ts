@@ -71,6 +71,7 @@ export const loadVotePage = cache(
         conferencing: poll.conferencing,
         status: poll.status,
         closedReason: poll.closedReason,
+        deadline: poll.deadline,
         allowTentativeVotes: poll.allowTentativeVotes,
         timeZone: poll.timeZone,
         userId: poll.userId,

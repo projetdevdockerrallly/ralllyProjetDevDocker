@@ -37,6 +37,7 @@ import { Trans, useTranslation } from "@/i18n/client";
 import {
   addMinutesToWallTime,
   instantToWallTime,
+  wallTimeToInstant,
 } from "@/lib/datetime/wall-time";
 import {
   encodeDateOption,
@@ -93,6 +94,9 @@ function getDefaultValues(poll: PollDetails): NewEventData {
     enableComments: !poll.disableComments,
     allowTentativeVotes: poll.allowTentativeVotes,
     requireParticipantEmail: poll.requireParticipantEmail,
+    deadline: poll.deadline
+      ? instantToWallTime(poll.deadline, getBrowserTimeZone()).slice(0, 16)
+      : "",
   };
 }
 
@@ -201,6 +205,12 @@ export function EditPoll({
 
   const onSubmit = form.handleSubmit((data) => {
     const input: Parameters<typeof update.mutate>[0] = { pollId: poll.id };
+    const deadlineChanged = data.deadline !== defaultValues.deadline;
+    if (deadlineChanged) {
+      input.deadline = data.deadline
+        ? wallTimeToInstant(data.deadline, getBrowserTimeZone())
+        : null;
+    }
 
     // Compared against the starting values rather than dirtyFields: the
     // Remove buttons clear a field with setValue, which doesn't mark it dirty.
@@ -236,7 +246,12 @@ export function EditPoll({
       input.requireParticipantEmail = data.requireParticipantEmail;
     }
 
-    if (!detailsChanged && !dateChanges && !settingsChanged) {
+    if (
+      !detailsChanged &&
+      !dateChanges &&
+      !settingsChanged &&
+      !deadlineChanged
+    ) {
       router.push(returnHref);
       return;
     }

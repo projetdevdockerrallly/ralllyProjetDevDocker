@@ -25,6 +25,7 @@ enum PollKind {
 enum PollClosedReason {
   auto
   manual
+  deadline
 
   @@map("poll_closed_reason")
 }
@@ -74,6 +75,7 @@ model Poll {
 
   @@index([spaceId])
   @@index([userId])
+  @@index([deadline])
   @@map("polls")
 }
 

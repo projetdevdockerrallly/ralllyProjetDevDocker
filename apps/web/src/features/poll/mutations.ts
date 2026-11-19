@@ -22,6 +22,7 @@ export type CreatePollParams = {
   location?: string;
   conferencing?: PollConferencing;
   timeZone?: string;
+  deadline?: Date | null;
   requireParticipantEmail?: boolean;
   hideParticipants?: boolean;
   hideScores?: boolean;
@@ -40,6 +41,7 @@ const pollResponseSelect = {
   location: true,
   conferencing: true,
   timeZone: true,
+  deadline: true,
   status: true,
   kind: true,
   createdAt: true,
@@ -97,6 +99,7 @@ export const createPoll = async ({
   location,
   conferencing,
   timeZone,
+  deadline,
   requireParticipantEmail,
   hideParticipants,
   hideScores,
@@ -116,6 +119,7 @@ export const createPoll = async ({
         location,
         conferencing,
         timeZone,
+        deadline,
         requireParticipantEmail,
         hideParticipants,
         hideScores,
@@ -380,6 +384,41 @@ export async function autoClosePolls() {
     // 5s default on large instances or after cron downtime.
     { timeout: 30_000 },
   );
+}
+
+/**
+ * Closes polls as soon as their configured voting deadline has passed.
+ * The deadline index keeps the per-minute cron bounded to due polls.
+ */
+export async function autoCloseDeadlinePolls() {
+  const closed = await prisma.$transaction(async (tx) => {
+    const closed = await tx.$queryRaw<{ id: string }[]>`
+      UPDATE polls p
+      SET status = 'closed', closed_reason = 'deadline'
+      WHERE p.status = 'open'
+        AND p.deleted = false
+        AND p.deadline IS NOT NULL
+        AND p.deadline <= (clock_timestamp() AT TIME ZONE 'UTC')
+      RETURNING p.id
+    `;
+
+    await recordPollActivities(
+      tx,
+      closed.map(({ id }) => ({
+        pollId: id,
+        type: "poll_closed" as const,
+        userId: null,
+        payload: { reason: "deadline" as const },
+      })),
+    );
+    return closed;
+  });
+
+  for (const { id } of closed) {
+    scheduleWebhookDispatch({ pollId: id });
+  }
+
+  return closed.length;
 }
 
 const REMOVE_DELETED_POLLS_BATCH_SIZE = 100;

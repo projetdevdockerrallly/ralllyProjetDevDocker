@@ -217,6 +217,7 @@ export const polls = router({
         disableComments: z.boolean().optional(),
         allowTentativeVotes: z.boolean().optional(),
         requireParticipantEmail: z.boolean().optional(),
+        deadline: z.date().nullable().optional(),
         options: z
           .object({
             startDate: z.string(),
@@ -356,6 +357,7 @@ export const polls = router({
             allowTentativeVotes: input.allowTentativeVotes,
             hideScores: input.hideScores,
             requireParticipantEmail: input.requireParticipantEmail,
+            deadline: input.deadline,
             spaceId,
           },
         });
@@ -466,6 +468,7 @@ export const polls = router({
         allowTentativeVotes: z.boolean().optional(),
         hideScores: z.boolean().optional(),
         requireParticipantEmail: z.boolean().optional(),
+        deadline: z.date().nullable().optional(),
       }),
     )
     .use(requireUserMiddleware)
@@ -595,6 +598,7 @@ export const polls = router({
             disableComments: true,
             allowTentativeVotes: true,
             requireParticipantEmail: true,
+            deadline: true,
           },
         });
 
@@ -636,6 +640,17 @@ export const polls = router({
             data: { status: "open", closedReason: null },
           });
           reopened = count === 1;
+        }
+
+        if (
+          input.deadline !== undefined &&
+          (input.deadline === null || input.deadline.getTime() > Date.now())
+        ) {
+          const { count } = await tx.poll.updateMany({
+            where: { id: pollId, status: "closed", closedReason: "deadline" },
+            data: { status: "open", closedReason: null },
+          });
+          reopened = reopened || count === 1;
         }
 
         // Snapshot before the delete: option_deleted events carry the dates
@@ -706,6 +721,7 @@ export const polls = router({
             disableComments: input.disableComments,
             allowTentativeVotes: input.allowTentativeVotes,
             requireParticipantEmail: input.requireParticipantEmail,
+            deadline: input.deadline,
             kind,
           },
         });
@@ -734,6 +750,7 @@ export const polls = router({
             conferencing: parsePollConferencing(prior.conferencing, {
               pollId,
             }),
+            deadline: prior.deadline,
             timeZone: prior.timeZone,
             hideParticipants: prior.hideParticipants,
             hideScores: prior.hideScores,
@@ -746,6 +763,7 @@ export const polls = router({
             description: input.description,
             location: input.location,
             conferencing,
+            deadline: input.deadline,
             timeZone: nextTimeZone,
             hideParticipants: input.hideParticipants,
             hideScores: input.hideScores,
@@ -822,6 +840,7 @@ export const polls = router({
           hideParticipants: true,
           hideScores: true,
           timeZone: true,
+          deadline: true,
           muted: true,
           _count: {
             select: {
@@ -851,6 +870,7 @@ export const polls = router({
           option_count: updatedPoll._count.options,
           has_location: !!updatedPoll.location,
           has_description: !!updatedPoll.description,
+          has_deadline: updatedPoll.deadline !== null,
           timezone: updatedPoll.timeZone,
           muted: updatedPoll.muted,
         },
@@ -870,7 +890,8 @@ export const polls = router({
         input.disableComments !== undefined ||
         input.allowTentativeVotes !== undefined ||
         input.hideScores !== undefined ||
-        input.requireParticipantEmail !== undefined;
+        input.requireParticipantEmail !== undefined ||
+        input.deadline !== undefined;
 
       if (hasDetailsUpdate) {
         track(ctx.user, {

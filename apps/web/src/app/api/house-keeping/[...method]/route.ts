@@ -9,6 +9,7 @@ import {
   deleteStripeCustomer,
 } from "@/features/billing/mutations";
 import {
+  autoCloseDeadlinePolls,
   autoClosePolls,
   deleteInactivePolls,
   removeDeletedPolls,
@@ -69,6 +70,22 @@ app.get("/auto-close-polls", async (c) => {
   logger.info(
     { task: "auto-close-polls", closed },
     "Closed polls with all options ended",
+  );
+
+  return c.json({
+    success: true,
+    summary: {
+      closed,
+    },
+  });
+});
+
+app.get("/auto-close-deadline-polls", async (c) => {
+  const closed = await autoCloseDeadlinePolls();
+
+  logger.info(
+    { task: "auto-close-deadline-polls", closed },
+    "Closed polls whose voting deadline has passed",
   );
 
   return c.json({

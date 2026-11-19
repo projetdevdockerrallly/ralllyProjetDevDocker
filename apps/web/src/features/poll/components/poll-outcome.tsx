@@ -11,7 +11,7 @@ import {
   EmptyStateTitle,
 } from "@/components/empty-state";
 import { AddToCalendarButton } from "@/features/calendars/components/add-to-calendar-button";
-import { usePoll } from "@/features/poll/client";
+import { useDeadlinePassed, usePoll } from "@/features/poll/client";
 import {
   EventDate,
   EventTimeRange,
@@ -63,6 +63,7 @@ export function PollOutcome({
   frame?: React.ElementType;
 }) {
   const poll = usePoll();
+  const deadlinePassed = useDeadlinePassed(poll.deadline);
   const [dismissed, setDismissed] = React.useState(false);
 
   if (!dismissed && poll.status === "scheduled" && poll.event) {
@@ -93,7 +94,7 @@ export function PollOutcome({
     );
   }
 
-  if (!dismissed && poll.status === "closed") {
+  if (!dismissed && (poll.status === "closed" || deadlinePassed)) {
     return (
       <Frame>
         <EmptyState>
@@ -104,7 +105,12 @@ export function PollOutcome({
             <Trans i18nKey="pollStatusClosed" defaults="Closed" />
           </EmptyStateTitle>
           <EmptyStateDescription>
-            {poll.closedReason === "auto" ? (
+            {deadlinePassed || poll.closedReason === "deadline" ? (
+              <Trans
+                i18nKey="pollDeadlinePassedDescription"
+                defaults="This poll's voting deadline has passed. No more responses are being accepted."
+              />
+            ) : poll.closedReason === "auto" ? (
               <Trans
                 i18nKey="pollAutoClosedDescription"
                 defaults="This poll was closed automatically because all of its dates have passed. No more responses are being accepted."
