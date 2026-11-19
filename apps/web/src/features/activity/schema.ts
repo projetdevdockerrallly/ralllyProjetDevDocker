@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { pollConferencingSchema } from "@/features/conferencing/schema";
 
-/** Why a poll closed: the organizer, or every option having passed. */
-export const pollClosedReasonSchema = z.enum(["auto", "manual"]);
+/** Why a poll closed: organizer, elapsed options, or the configured deadline. */
+export const pollClosedReasonSchema = z.enum(["auto", "manual", "deadline"]);
 
 export type PollClosedReason = z.infer<typeof pollClosedReasonSchema>;
 
@@ -68,6 +68,11 @@ export const pollChangeSchema = z.discriminatedUnion("field", [
     field: z.literal("conferencing"),
     action: changeActionSchema,
     from: pollConferencingSchema.nullable(),
+  }),
+  z.object({
+    field: z.literal("deadline"),
+    action: changeActionSchema,
+    from: z.iso.datetime().nullable(),
   }),
   z.object({ field: z.literal("timeZone"), from: z.string().nullable() }),
   z.object({ field: z.literal("hideParticipants"), from: z.boolean() }),

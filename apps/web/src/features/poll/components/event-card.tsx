@@ -13,6 +13,7 @@ import {
   EventMetaList,
   EventMetaTitle,
 } from "@/features/poll/components/event-meta";
+import { PollDeadlineMeta } from "@/features/poll/components/poll-deadline-meta";
 import TruncatedLinkify from "@/features/poll/components/truncated-linkify";
 import VoteIcon from "@/features/poll/components/vote-icon";
 import { SpaceIcon } from "@/features/space/components/space-icon";
@@ -99,6 +100,7 @@ export function EventDetails() {
             <TruncatedLinkify>{poll.location}</TruncatedLinkify>
           </EventMetaItem>
         ) : null}
+        <PollDeadlineMeta deadline={poll.deadline} />
         {poll.conferencing ? (
           <EventMetaItem>
             <PollConferencingSummary

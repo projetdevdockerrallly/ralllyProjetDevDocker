@@ -88,6 +88,11 @@ export const createPollInputSchema = z
       .optional()
       .meta({ example: "Pick a time that works for everyone" }),
     location: z.string().trim().max(255).optional().meta({ example: "Zoom" }),
+    deadline: z.iso.datetime({ offset: true }).optional().meta({
+      description:
+        "Optional voting deadline as an ISO 8601 timestamp with an offset. Responses become read-only after this instant.",
+      example: "2027-03-01T17:00:00Z",
+    }),
     requireEmail: z.boolean().optional().meta({
       description: "Require participants to provide their email address",
       example: true,
@@ -193,6 +198,10 @@ const pollSchema = z
     }),
     location: z.string().nullable().meta({ example: "Zoom" }),
     timezone: z.string().nullable().meta({ example: "Europe/London" }),
+    deadline: z.iso.datetime().nullable().meta({
+      description: "Voting deadline as an ISO 8601 instant in UTC, if set.",
+      example: "2027-03-01T17:00:00.000Z",
+    }),
     status: pollStatusSchema,
     createdAt: z.string().datetime().meta({ example: "2025-01-10T12:00:00Z" }),
     user: pollUserSchema.nullable().meta({

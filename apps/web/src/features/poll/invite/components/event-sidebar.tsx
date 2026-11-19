@@ -8,6 +8,7 @@ import {
   EventMetaList,
   EventMetaTitle,
 } from "@/features/poll/components/event-meta";
+import { PollDeadlineMeta } from "@/features/poll/components/poll-deadline-meta";
 import TruncatedLinkify from "@/features/poll/components/truncated-linkify";
 import { PoweredByLink } from "@/features/poll/vote/components/powered-by-link";
 import { SpaceIcon } from "@/features/space/components/space-icon";
@@ -20,6 +21,7 @@ type SidebarPoll = {
   description: string | null;
   location: string | null;
   conferencing: PollConferencing | null;
+  deadline: Date | null;
   event: { conferencingUri: string | null } | null;
   allowTentativeVotes: boolean;
   spaceId: string | null;
@@ -97,6 +99,7 @@ export async function EventSidebar({
               <TruncatedLinkify>{poll.location}</TruncatedLinkify>
             </EventMetaItem>
           ) : null}
+          <PollDeadlineMeta deadline={poll.deadline} />
           {poll.conferencing ? (
             <EventMetaItem>
               <PollConferencingSummary

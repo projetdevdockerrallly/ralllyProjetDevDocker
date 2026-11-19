@@ -104,6 +104,7 @@ function toPollResponseBody(poll: {
   title: string;
   description: string | null;
   location: string | null;
+  deadline: Date | null;
   conferencing: PollConferencing | null;
   timeZone: string | null;
   status: string;
@@ -130,6 +131,7 @@ function toPollResponseBody(poll: {
       title: poll.title,
       description: poll.description,
       location: poll.location,
+      deadline: poll.deadline?.toISOString() ?? null,
       conferencing: poll.conferencing ?? null,
       timeZone: poll.timeZone,
       status: poll.status,
@@ -614,6 +616,7 @@ app.post(
         title: input.title,
         description: input.description,
         location: input.location,
+        deadline: input.deadline ? new Date(input.deadline) : null,
         conferencing,
         requireParticipantEmail: input.requireEmail,
         hideParticipants: input.hideParticipants,
@@ -685,6 +688,7 @@ app.post(
       title: input.title,
       description: input.description,
       location: input.location,
+      deadline: input.deadline ? new Date(input.deadline) : null,
       conferencing,
       timeZone,
       requireParticipantEmail: input.requireEmail,

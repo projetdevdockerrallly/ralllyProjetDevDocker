@@ -52,6 +52,40 @@ export function PollProvider({
 
 export const usePoll = () => useRequiredContext(PollContext).poll;
 
+export function useDeadlinePassed(deadline: Date | null) {
+  const [deadlinePassed, setDeadlinePassed] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!deadline) {
+      setDeadlinePassed(false);
+      return;
+    }
+
+    setDeadlinePassed(false);
+    let timeout: number | undefined;
+    const checkDeadline = () => {
+      const remaining = deadline.getTime() - Date.now();
+      if (remaining <= 0) {
+        setDeadlinePassed(true);
+      } else {
+        timeout = window.setTimeout(
+          checkDeadline,
+          Math.min(remaining, 2_147_483_647),
+        );
+      }
+    };
+
+    checkDeadline();
+    return () => {
+      if (timeout !== undefined) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [deadline]);
+
+  return deadlinePassed;
+}
+
 /** The poll when a provider is mounted, for components shared with pages
  * that pass their data as props instead. */
 export const usePollOrNull = () => React.useContext(PollContext)?.poll ?? null;
@@ -87,11 +121,13 @@ export const usePermissions = () => {
   const { poll, participants, linkedParticipantIds, viewerRole } =
     useRequiredContext(PollContext);
   const { user } = useUser();
+  const deadlinePassed = useDeadlinePassed(poll.deadline);
+  const pollIsOpen = poll.status === "open" && !deadlinePassed;
 
   return {
-    canAddNewParticipant: poll.status === "open",
+    canAddNewParticipant: pollIsOpen,
     canEditParticipant: (participantId: string) => {
-      if (poll.status !== "open") {
+      if (!pollIsOpen) {
         return false;
       }
 

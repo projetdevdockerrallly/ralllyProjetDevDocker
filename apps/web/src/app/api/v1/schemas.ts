@@ -179,6 +179,11 @@ const pollSettingsFields = {
     description: "Where the event takes place, as free text.",
     example: "Conference Room A",
   }),
+  deadline: z.iso.datetime({ offset: true }).optional().meta({
+    description:
+      "Optional voting deadline as an ISO 8601 timestamp with an offset. Responses become read-only after this instant.",
+    example: "2027-03-01T17:00:00Z",
+  }),
   conferencing: pollConferencingSchema.optional().meta({
     description:
       "The video call for the event. `zoom`, `meet`, `teams` and `webex` need the organizer to have connected that account in their Conferencing settings; the meeting link is created when the poll is finalized. `custom` names any call, with an optional link participants join with.",
@@ -237,6 +242,7 @@ const createDatePollInputSchema = z
     }),
     description: pollSettingsFields.description,
     location: pollSettingsFields.location,
+    deadline: pollSettingsFields.deadline,
     conferencing: pollSettingsFields.conferencing,
     requireEmail: pollSettingsFields.requireEmail,
     hideParticipants: pollSettingsFields.hideParticipants,
@@ -259,6 +265,7 @@ const createTimePollInputSchema = z
     }),
     description: pollSettingsFields.description,
     location: pollSettingsFields.location,
+    deadline: pollSettingsFields.deadline,
     conferencing: pollSettingsFields.conferencing,
     requireEmail: pollSettingsFields.requireEmail,
     hideParticipants: pollSettingsFields.hideParticipants,
@@ -450,6 +457,10 @@ const pollSchema = z
       example: { provider: "zoom" },
     }),
     timeZone: z.string().nullable().meta({ example: "Europe/London" }),
+    deadline: z.iso.datetime().nullable().meta({
+      description: "Voting deadline as an ISO 8601 instant in UTC, if set.",
+      example: "2027-03-01T17:00:00.000Z",
+    }),
     status: pollStatusSchema,
     kind: pollKindSchema,
     createdAt: z.iso.datetime().meta({ example: "2025-01-10T12:00:00.000Z" }),

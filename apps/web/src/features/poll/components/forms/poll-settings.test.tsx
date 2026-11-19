@@ -1,4 +1,5 @@
 import { Form } from "@rallly/ui/form";
+import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
@@ -31,6 +32,7 @@ function TestForm({
       requireParticipantEmail: false,
       hideParticipants: false,
       hideScores: false,
+      deadline: "",
     },
   });
   return (
@@ -44,6 +46,18 @@ describe("PollSettingsForm comments setting", () => {
   it("shows comments off by default", () => {
     render(<TestForm />);
     expect(screen.getByRole("switch", { name: /comments/i })).not.toBeChecked();
+  });
+
+  describe("PollSettingsForm voting deadline", () => {
+    it("accepts an optional local date and time", () => {
+      render(<TestForm />);
+      const input = screen.getByLabelText(/voting deadline/i);
+
+      expect(input).toHaveAttribute("type", "datetime-local");
+      fireEvent.change(input, { target: { value: "2026-11-25T18:00" } });
+
+      expect(input).toHaveValue("2026-11-25T18:00");
+    });
   });
 
   it("can be switched on", async () => {
