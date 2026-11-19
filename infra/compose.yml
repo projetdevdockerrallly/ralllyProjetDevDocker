@@ -272,6 +272,10 @@ services:
       OIDC_DISCOVERY_URL: ${AUTHENTIK_URL}/application/o/rallly/.well-known/openid-configuration
       OIDC_CLIENT_ID: ${RALLLY_OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${RALLLY_OIDC_CLIENT_SECRET:-}
+      # Feature libre (image du fork) : groupes Authentik -> droits Rallly
+      OIDC_GROUPS_CLAIM_PATH: ${RALLLY_OIDC_GROUPS_CLAIM_PATH:-groups}
+      OIDC_ADMIN_GROUPS: ${RALLLY_OIDC_ADMIN_GROUPS:-rallly-admins}
+      OIDC_POLL_CREATOR_GROUPS: ${RALLLY_OIDC_POLL_CREATOR_GROUPS:-rallly-admins}
     cap_drop: [ALL]
     depends_on:
       rallly-db:

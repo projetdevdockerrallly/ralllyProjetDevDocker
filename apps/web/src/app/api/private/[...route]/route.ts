@@ -13,6 +13,7 @@ import {
 } from "hono-openapi";
 import { after } from "next/server";
 import { moderateContent } from "@/features/moderation/mutations";
+import { getCanUserCreatePolls } from "@/features/oidc-groups/data";
 import { MAX_POLL_OPTIONS } from "@/features/poll/constants";
 import {
   getPollParticipants,
@@ -301,6 +302,17 @@ app.post(
       }
 
       organizerUserId = spaceMember.user.id;
+    }
+
+    // OIDC_POLL_CREATOR_GROUPS: the organizer must be allowed to create polls.
+    if (!(await getCanUserCreatePolls(organizerUserId))) {
+      return c.json(
+        apiError(
+          "POLL_CREATION_FORBIDDEN",
+          "The organizer is not allowed to create polls on this instance.",
+        ),
+        403,
+      );
     }
 
     // Same gate as the app. The strike goes to the key holder, who is the

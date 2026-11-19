@@ -28,6 +28,7 @@ export async function DashboardHome({
   hasNoAccounts,
   canManageBilling,
   canManageMembers,
+  canCreatePolls = true,
 }: {
   openPollCount: number;
   upcomingEventCount: number;
@@ -36,6 +37,7 @@ export async function DashboardHome({
   hasNoAccounts: boolean;
   canManageBilling: boolean;
   canManageMembers: boolean;
+  canCreatePolls?: boolean;
 }) {
   const { t, i18n } = await getTranslation();
 
@@ -52,31 +54,33 @@ export async function DashboardHome({
         {hasNoAccounts && isFeatureEnabled("emailLogin") ? (
           <PasswordSetupAlert />
         ) : null}
-        <div className="space-y-4">
-          <h2 className="text-muted-foreground text-sm">
-            <Trans
-              t={t}
-              i18n={i18n}
-              ns="app"
-              i18nKey="homeActionsTitle"
-              defaults="Actions"
-            />
-          </h2>
-          <TileGrid>
-            <Tile render={<HoverPrefetchLink href="/new" />}>
-              <CreatePageIcon />
-              <TileTitle>
-                <Trans
-                  t={t}
-                  i18n={i18n}
-                  ns="app"
-                  i18nKey="create"
-                  defaults="Create"
-                />
-              </TileTitle>
-            </Tile>
-          </TileGrid>
-        </div>
+        {canCreatePolls ? (
+          <div className="space-y-4">
+            <h2 className="text-muted-foreground text-sm">
+              <Trans
+                t={t}
+                i18n={i18n}
+                ns="app"
+                i18nKey="homeActionsTitle"
+                defaults="Actions"
+              />
+            </h2>
+            <TileGrid>
+              <Tile render={<HoverPrefetchLink href="/new" />}>
+                <CreatePageIcon />
+                <TileTitle>
+                  <Trans
+                    t={t}
+                    i18n={i18n}
+                    ns="app"
+                    i18nKey="create"
+                    defaults="Create"
+                  />
+                </TileTitle>
+              </Tile>
+            </TileGrid>
+          </div>
+        ) : null}
         <div className="space-y-4">
           <h2 className="text-muted-foreground text-sm">
             <Trans

@@ -30,6 +30,7 @@ import {
 import { queueEmails } from "@/features/email-queue/mutations";
 import { getInstancePolicy } from "@/features/instance-policy/data";
 import { moderateContent } from "@/features/moderation/mutations";
+import { getCanUserCreatePolls } from "@/features/oidc-groups/data";
 import {
   canUserManagePoll,
   getPolls,
@@ -229,6 +230,16 @@ export const polls = router({
     .use(requireUserMiddleware)
     .use(createRateLimitMiddleware("create_poll", 20, "1 h"))
     .mutation(async ({ ctx, input }) => {
+      // OIDC_POLL_CREATOR_GROUPS: only members of the configured groups (and
+      // instance admins) can create polls; guests never can when it is set.
+      if (
+        !(await getCanUserCreatePolls(ctx.user.isGuest ? null : ctx.user.id))
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to create polls",
+        });
+      }
       const activeSpace = ctx.user.isGuest
         ? null
         : await getActiveSpaceForUser(ctx.user.id);
@@ -1648,6 +1659,13 @@ export const polls = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (!(await getCanUserCreatePolls(ctx.user.id))) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to create polls",
+        });
+      }
+
       const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
 
       if (!hasAccess) {
